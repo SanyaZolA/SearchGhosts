@@ -1,22 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { GhostType } from '@/entities/ghost/model/types';
 import { useEffect } from "react";
-import { ThreatLevel } from "@/entities/ghost/model/types";
 
 export function useGhostAll() {
   return useQuery({
     queryKey: ["ghosts"],
     queryFn: async () => {
       const res = await fetch("/api/ghosts");
-      return res.json();
+      if (!res.ok) throw new Error("Ошибка при загрузке духов");
+      return res.json() as Promise<GhostType[]>;
     },
   });
 }
 
-export function useCaptureGhost() {
+export function useCaptureGhost() { // поймать определенного духа
   const client = useQueryClient();
 
-  return useMutation({
+  return useMutation({              // для обновления данных
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/ghosts/${id}`, {
         method: "PATCH",
@@ -27,7 +27,7 @@ export function useCaptureGhost() {
     },
 
 
-    onMutate: async (id) => {
+    onMutate: async (id) => {         // optimistic update
       await client.cancelQueries({ queryKey: ["ghosts"] });
 
       const prev = client.getQueryData(["ghosts"]);
@@ -48,12 +48,9 @@ export function useCaptureGhost() {
     },
 
     onSuccess: (data) => {
-          client.setQueryData(["ghosts"], (old: GhostType[]) =>
+        client.setQueryData(["ghosts"], (old: GhostType[]) =>
         old.map((g) => (g.id === data.id ? { ...g, status: data.status } : g))
       );
-  setTimeout(() => {
-    client.invalidateQueries({ queryKey: ["ghosts"] });
-  }, 3000);
 },
   });
 }
@@ -65,7 +62,7 @@ export function useGhostSSE() {
     const eventSource = new EventSource("/api/ghosts/stream");
 
     eventSource.onmessage = (event) => {
-      const data: { id: string; threatLevel: ThreatLevel } = JSON.parse(event.data);
+      const data: { id: GhostType["id"]; threatLevel: GhostType["threatLevel"] } = JSON.parse(event.data);
 
       queryClient.setQueryData(["ghosts"], (old: GhostType[] = []) =>
         old.map((g) =>

@@ -1,9 +1,15 @@
 import { mockGhosts } from "@/data/ghosts";
-import { ThreatLevel } from "@/entities/ghost/model/types";
+import { GhostType } from "@/entities/ghost/model/types";
+import z from "zod";
 
 export const dynamic = "force-dynamic";
 
-const levels: ThreatLevel[] = ["Низкий", "Средний", "Высокий", "Критический"];
+const levels: GhostType["threatLevel"][] = ["Низкий", "Средний", "Высокий", "Критический"];
+
+const ghostSchema = z.object({
+  id: z.string(),
+  threatLevel: z.enum(levels),
+});
 
 export async function GET() {
   const stream = new ReadableStream({
@@ -26,17 +32,19 @@ export async function GET() {
           const ghost = mockGhosts[Math.floor(Math.random() * mockGhosts.length)];
           ghost.threatLevel = levels[Math.floor(Math.random() * levels.length)];
 
-          const data = `data: ${JSON.stringify({ id: ghost.id, threatLevel: ghost.threatLevel })}\n\n`;
+          const dataS = { id: ghost.id, threatLevel: ghost.threatLevel };
+          const parsed = ghostSchema.safeParse(dataS);
+          if (!parsed.success) continue;
+
+          
+          const dataString = `data: ${JSON.stringify(parsed.data)}\n\n`;
           try {
-            controller.enqueue(encoder.encode(data));
+            controller.enqueue(encoder.encode(dataString));
           } catch {
             break;
           }
-
           await new Promise((res) => setTimeout(res, 5000));
         }
-      } catch (err) {
-        console.error("Ошибка SSE:", err);
       } finally {
         closeController();
       }

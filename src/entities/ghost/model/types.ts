@@ -1,10 +1,12 @@
-export type ThreatLevel = 'Низкий' | 'Средний' | 'Высокий' | 'Критический';
+import { z } from "zod";
 
-export interface GhostType {
-  id: string;
-  name: string;
-  image: string;
-  location: string;
-  threatLevel: ThreatLevel;
-  status: 'Активен' | 'Нейтрализован';
-}
+export const ghostSchemaType = z.object({
+  id: z.string(),
+  name: z.string(),
+  image: z.string(),
+  location: z.string(),
+  threatLevel: z.enum(["Низкий", "Средний", "Высокий", "Критический"]),
+  status: z.enum(["Активен", "Нейтрализован"]),
+});
+
+export type GhostType = z.infer<typeof ghostSchemaType>;
