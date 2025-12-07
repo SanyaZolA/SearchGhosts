@@ -33,10 +33,8 @@ export async function GET() {
           ghost.threatLevel = levels[Math.floor(Math.random() * levels.length)];
 
           const dataS = { id: ghost.id, threatLevel: ghost.threatLevel };
-          const parsed = ghostSchema.safeParse(dataS);
+          const parsed = ghostSchema.safeParse(dataS);   // проверка
           if (!parsed.success) continue;
-
-          
           const dataString = `data: ${JSON.stringify(parsed.data)}\n\n`;
           try {
             controller.enqueue(encoder.encode(dataString));
